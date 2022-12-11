@@ -14,14 +14,16 @@ from utils import (create_sphere_pcl, create_sphere_mesh,
 # Setup canvas
 z_init = 1000
 s = 500.
-plane_height = 480*2
-plane_width = 640*2
+# plane_height = 480*2
+# plane_width = 640*2
+plane_height = 480
+plane_width = 640
 
 # Create tangent plane
 # plane_height = 255
 # plane_width = 255
 plane_pcd = setup_canvas(width=plane_width, height=plane_height)
-plane_pcd.translate((0, 0, s))
+# plane_pcd.translate((0, 0, s))
 tangent_coord = o3d.geometry.TriangleMesh(
 ).create_coordinate_frame(size=100, origin=(0, 0, s))
 
@@ -40,18 +42,20 @@ rot_axis = o3d.geometry.TriangleMesh().create_arrow(
     cone_radius=10., cone_height=20.)
 mat_rot_axis = o3d.visualization.rendering.MaterialRecord()
 mat_rot_axis.base_color = [1., 0., 0., 0.5]
-rot_axis.translate((0, 0, s))
+rot_axis.translate((0, 0, 2*s))
 
 # Add mesh
 
 # sphere_mesh, mat_sphere = create_sphere_mesh(coords=(0,0,z_init), scale=s)
 radius = s
-sphere_mesh, mat_sphere = create_sphere_mesh(coords=(0, 0, 0), radius=radius)
+# sphere_mesh, mat_sphere = create_sphere_mesh(coords=(0, 0, 0), radius=radius)
+sphere_mesh, mat_sphere = create_sphere_mesh(coords=(0, 0, s), radius=radius)
 
 mesh = o3d.io.read_triangle_mesh("models/obj_000001.ply")
 # Scale and center
 mesh.vertices = o3d.utility.Vector3dVector(
     (np.asarray(mesh.vertices) - np.asarray(mesh.vertices).mean(axis=0))*1000)
+mesh.translate((0, 0, s))
 
 R = SO3.random_uniform()
 axis, angle = get_axis_angle_from_matrix(R)
@@ -62,7 +66,7 @@ cam_width = plane_width //2
 cam_height = plane_height//2
 fx = cam_width/2
 fy = cam_height/2
-cx = cam_width/2; cy = cam_height/2
+cx = cam_width; cy = cam_height
 # cx = 0; cy = 0
 K = np.array([  [fx, 0, cx],
                 [0, fy, cy],
@@ -70,7 +74,7 @@ K = np.array([  [fx, 0, cx],
 
 
 def make_line(axis):
-    line = np.array([t*axis for t in np.linspace(-s, s, 1000)])
+    line = np.array([t*axis for t in np.linspace(0, 2*s, 1000)])
     line_pcl = o3d.geometry.PointCloud()
     line_pcl.points = o3d.utility.Vector3dVector(line)
 
@@ -115,7 +119,8 @@ def animate_projection(vis, K=K, mesh=mesh):
     plane_pts = plane_pts//plane_pts[:, 2, None]
     inlier_mask = np.zeros(plane_pts.shape[0], dtype=bool)
     inlier_mask[
-        (plane_pts[:, 0] > 0)*(plane_pts[:, 0] < cam_width)*(plane_pts[:, 1] > 0)*(plane_pts[:, 1] < cam_height)
+        # (plane_pts[:, 0] > 0)*(plane_pts[:, 0] < cam_width)*(plane_pts[:, 1] > 0)*(plane_pts[:, 1] < cam_height)
+        (plane_pts[:, 0] > 0)*(plane_pts[:, 0] < plane_width)*(plane_pts[:, 1] > 0)*(plane_pts[:, 1] < plane_height)
         ] = True
     # plane_pts[plane_pts[:, 0] < 0] = 0
     # plane_pts[plane_pts[:, 1] < 0] = 0
