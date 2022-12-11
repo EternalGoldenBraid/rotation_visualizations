@@ -82,10 +82,17 @@ def animate_projection(vis, mesh=mesh, K=K):
 
 # Create a visualizer and set the background color to white
 vis = o3d.visualization.Visualizer()
-vis.create_window()
 # vis.get_render_option().background_color = np.ones(4)
+vis.create_window()
 
-# Add the point cloud and the mesh to the visualizer
+
+# vis.create_window()
+# vis.add_geometry(coords)
+# vis.add_geometry(plane_pcd)
+# vis.add_geometry(mesh)
+# vis.add_geometry(rot_axis)
+# # vis.add_geometry(sphere_pcl)
+vis.add_geometry(sphere_mesh)
 # geoms = [
 #     {'name': 'coords', 'geometry': coords},
 #     # {'name': 'tangent_coords', 'geometry': tangent_coord},
@@ -94,18 +101,10 @@ vis.create_window()
 #     {'name': 'object', 'geometry': mesh},
 #     {'name': 'sphere', 'geometry': sphere_mesh, 'material': mat_sphere},
 # ]
-
-vis.add_geometry(coords)
-# vis.add_geometry(plane_pcd)
-vis.add_geometry(mesh)
-vis.add_geometry(rot_axis)
-# # vis.add_geometry(sphere_pcl)
-# vis.add_geometry(sphere_mesh)
-
-# o3d.visualization.draw(geoms)
+# vis.add_geometry(geoms[-1])
 
 # Register the animate_projection function as the animation callback
-vis.register_animation_callback(animate_projection)
+# vis.register_animation_callback(animate_projection)
 
 # Run the visualizer
 vis.run()

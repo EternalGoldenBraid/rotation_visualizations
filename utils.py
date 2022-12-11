@@ -3,6 +3,21 @@ import numpy as np
 
 from numpy.typing import NDArray
 
+def convert_material_record(mat_record):
+    mat = o3d.visualization.Material('defaultLit')
+    # Convert scalar parameters
+    mat.vector_properties['base_color'] = mat_record.base_color
+    mat.scalar_properties['metallic'] = mat_record.base_metallic
+    mat.scalar_properties['roughness'] = mat_record.base_roughness
+    mat.scalar_properties['reflectance'] = mat_record.base_reflectance
+    # mat.texture_maps['albedo'] = o3d.t.geometry.Image.from_legacy(
+    #     mat_record.albedo_img)
+    # mat.texture_maps['normal'] = o3d.t.geometry.Image.from_legacy(
+    #     mat_record.normal_img)
+    # mat.texture_maps['ao_rough_metal'] = o3d.t.geometry.Image.from_legacy(
+    #     mat_record.ao_rough_metal_img)
+    return mat
+
 def create_sphere_pcl(n_pts_sphere=100, coords=(0,0,0)):
 
     sphere_pts = []
@@ -35,9 +50,14 @@ def create_sphere_mesh(coords: tuple =(0,0,0), scale: float =1., radius=1.0):
     mat_sphere.absorption_distance = 100
     mat_sphere.absorption_color = [0.5, 0.5, 0.5]
 
-    sphere_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=radius)
-    sphere_mesh.compute_vertex_normals()
+    sphere_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=radius, 
+                        create_uv_map=True)
+    # sphere_mesh = o3d.t.geometry.TriangleMesh.from_legacy(sphere_mesh)
+    # sphere_mesh.compute_vertex_normals()
     sphere_mesh.translate(coords)
+
+    # mat_sphere = convert_material_record(mat_record = mat_sphere)
+    # sphere_mesh.material = mat_sphere
     # sphere_mesh.vertices = o3d.utility.Vector3dVector(
     #     (np.asarray(sphere_mesh.vertices) - np.asarray(sphere_mesh.vertices).mean(axis=0))*scale)
     
@@ -54,7 +74,10 @@ def setup_canvas(width=640, height=480, color=(0,0,0)):
 def get_axis_angle_from_matrix(R: np.array):
 
     angle = np.arccos((np.trace(R)-1)/2)
-    u = 1/(2*np.sin(angle))*(R-R.T) # https://thenumb.at/Exponential-Rotations/
+    u_skew_sym = 1/(2*np.sin(angle))*(R-R.T) # https://thenumb.at/Exponential-Rotations/
+    
+    u = 1/(2*np.sin(angle))*(
+        np.array([R[2,1]-R[1,2], R[0,2]-R[2,0], R[1,0] - R[0,1]])) # https://thenumb.at/Exponential-Rotations/
     
     return (u, angle)
 
@@ -82,3 +105,14 @@ def get_rotating_transform(u, v):
     transform = T @ R @ T.T
     assert np.allclose(v, transform @ u)
     return transform
+
+def gen_spherical_gaussian_axis(old_axis):
+    """
+    Generate a random unit vector on the unit sphere close to the old_axis
+    """
+
+    axis = np.random.randn(3)
+    axis /= np.linalg.norm(axis)
+    axis = axis * 0.1 + old_axis * 0.9
+    axis /= np.linalg.norm(axis)
+    return axis
