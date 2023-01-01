@@ -20,14 +20,18 @@ def convert_material_record(mat_record):
     #     mat_record.ao_rough_metal_img)
     return mat
 
-def load_object_pointcloud(device: o3d.core.Device):
+def load_object_pointcloud(device: o3d.core.Device, n_points: int = 2048):
+
     ### Read mesh into pcl
     mesh = o3d.t.io.read_triangle_mesh("models/obj_000001.ply", print_progress=True)
+    # In mm
     mesh.vertex.positions = (mesh.vertex.positions-mesh.vertex.positions.mean(dim=0))*1000.
     # mesh.vertex.positions = (mesh.vertex.positions-mesh.vertex.positions.mean(dim=0))
     
     mesh_pcl = o3d.t.geometry.PointCloud(device)
     mesh_pcl.point.positions = mesh.vertex.positions
+    # Downsample to n_points
+    mesh_pcl = mesh_pcl.random_down_sample(sampling_ratio=n_points/len(mesh_pcl.point.positions))
     mesh_pcl = mesh_pcl.paint_uniform_color(Tensor([1.0, 0.0, 0.0], float32))
     # mesh_pcl.paint_uniform_color([0.5, 0, 0.1])
     

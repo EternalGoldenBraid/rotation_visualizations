@@ -55,9 +55,6 @@ DEVICE = o3d.core.Device('CPU:0')
 # mesh = o3d.t.geometry.TriangleMesh(DEVICE)
 mesh = o3d.t.io.read_triangle_mesh("models/obj_000001.ply", print_progress=True)
 # Scale and center
-# mesh.vertex.positions = o3d.t.utility.Vector3dVector(
-dtype_f = o3d.core.float32
-dtype_i = o3d.core.int64
 mesh.vertex.positions = (mesh.vertex.positions-mesh.vertex.positions.mean(dim=0))*1000.
 mesh.translate((0, 0, s))
 
@@ -106,15 +103,8 @@ def animate_projection(vis, t=0, K=K, mesh=mesh):
         # center=o3d.core.Tensor([0,0,0]),
         center=[0,0,s],
         )
-
-    import pdb; pdb.set_trace()
-    vis.remove_geometry('object')
-    print("Removed geometry")
-    import pdb; pdb.set_trace()
-    # vis.update_geometry(name='object', mesh, 1) # Only supported to t.PointCloud
-    vis.add_geometry('object', mesh)
-    print("Added geometry")
-    # time.sleep(.1)
+    vis.remove_geometry("object")
+    vis.add_geometry(name="object", geometry=mesh, time=t)
 
     # # Transport axis of rotation
     # # Transform the mesh using the projection matrix
@@ -126,20 +116,22 @@ def animate_projection(vis, t=0, K=K, mesh=mesh):
 
     # Project points to the camera at tangent plane plane_pcd and
     # visualize them as a white points on the plane.
-    # plane_colors = np.zeros((plane_width, plane_height, 3))
-    # plane_pts = np.dot(K, mesh.vertex.positions.numpy().T).T
-    # plane_pts = plane_pts//plane_pts[:, 2, None]
-    # inlier_mask = np.zeros(plane_pts.shape[0], dtype=bool)
-    # inlier_mask[
-    #     (plane_pts[:, 0] > 0)*(plane_pts[:, 0] < plane_width)*(plane_pts[:, 1] > 0)*(plane_pts[:, 1] < plane_height)
-    #     ] = True
-    # plane_colors[plane_pts[inlier_mask][:, 0].astype(int), plane_pts[inlier_mask][:, 1].astype(int)] = [
-    #     1, 1, 1]
-    # plane_pcd.colors = o3d.utility.Vector3dVector(plane_colors.reshape(-1, 3, order='C'))
-    # vis.remove_geometry('plane')
-    # vis.add_geometry(name='plane', geometry=plane_pcd)
+    plane_colors = np.zeros((plane_width, plane_height, 3))
+    plane_pts = np.dot(K, mesh.vertex.positions.numpy().T).T
+    plane_pts = plane_pts//plane_pts[:, 2, None]
+    inlier_mask = np.zeros(plane_pts.shape[0], dtype=bool)
+    inlier_mask[
+        (plane_pts[:, 0] > 0)*(plane_pts[:, 0] < plane_width)*(plane_pts[:, 1] > 0)*(plane_pts[:, 1] < plane_height)
+        ] = True
+    plane_colors[plane_pts[inlier_mask][:, 0].astype(int), plane_pts[inlier_mask][:, 1].astype(int)] = [
+        1, 1, 1]
+    plane_pcd.colors = o3d.utility.Vector3dVector(plane_colors.reshape(-1, 3, order='C'))
+    vis.remove_geometry('plane')
+    vis.add_geometry(name='plane', geometry=plane_pcd)
     
 
+    # vis.is_animating = False
+    vis.is_animating = True
     return O3DVisualizer.TickResult.REDRAW
 
 # Create a visualizer and set the background color to white
@@ -167,7 +159,7 @@ from o3d_utils import draw
 window_uid = draw(geoms, title='projecion',
                     actions=[('callback', animate_projection)],
                     # on_init=animate_projection,
-                    animation_duration=1000, animation_time_step=1,
+                    animation_duration=10, animation_time_step=0.01,
                     # on_animation_tick=animate_projection,
                     on_animation_frame=animate_projection,
                     #    non_blocking_and_return_uid=True,
