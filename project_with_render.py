@@ -32,7 +32,7 @@ sphere_mesh, mat_sphere = create_sphere_mesh(coords=(0,0,0),  radius=radius)
 
 ### Load object to be rotated
 print("Loading PCL")
-object_pcl = load_object_pointcloud(device=DEVICE, n_points=2000)
+object_pcl = load_object_pointcloud(device=DEVICE, n_points=20000)
 object_center = Tensor(np.array([0,0,0]), float32, device=DEVICE)
 object_pcl.translate(object_center)
 print("PCL min/max")
