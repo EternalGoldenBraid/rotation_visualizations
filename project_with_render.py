@@ -18,28 +18,25 @@ from math import pi
 from utils import load_object_pointcloud
 from visualizer_utils import visualizer_setup, create_image_frame, draw_image_on_image_frame
 from geom_utils import (rotate_axis_angle, generate_rotation_matrices, 
-                        create_plane, project_to_plane)
+                        create_plane, project_to_plane, create_sphere_mesh)
 
 DEVICE = o3d.core.Device('CPU:0')
 # DEVICE = o3d.core.Device('CUDA:0')
 
+
 radius=1000//2
 # radius=0
+
+### Create sphere
+sphere_mesh, mat_sphere = create_sphere_mesh(coords=(0,0,0),  radius=radius)
 
 ### Load object to be rotated
 print("Loading PCL")
 object_pcl = load_object_pointcloud(device=DEVICE, n_points=2000)
-object_center = Tensor(np.array([0,0,radius]), float32, device=DEVICE)
+object_center = Tensor(np.array([0,0,0]), float32, device=DEVICE)
 object_pcl.translate(object_center)
 print("PCL min/max")
 print(object_pcl.point.positions.min(), object_pcl.point.positions.max())
-
-# points = np.random.rand(100, 3)*100
-# point_cloud = o3d.geometry.PointCloud()
-# point_cloud.points = o3d.utility.Vector3dVector(points)
-# pcd = o3d.t.geometry.PointCloud.from_legacy(point_cloud)
-# object_pcl.point.positions = pcd.point.positions
-
 print(30*"#")
 
 ### Construct projection plane (camera)
@@ -49,19 +46,10 @@ frame_width: int = 640
 frame_height: int = 480
 cam_width: int = 640
 cam_height: int = 480
-# fx = cam_width
-# fy = cam_height
-# cx = cam_width; cy = cam_height
-# # cx = 0; cy = 0
-# K = Tensor([[radius, 0, cx],
-#               [0, radius, cy],
-#               [0,  0,  1]], float32)
-# K = np.array([[-0.5, 0, 0],
-#               [0, 0.5, 0],
-#               [0,  0,  1]])
 
 ### Rendering params
-x, y, z, = -0.44999999999999996, -0.5, 0
+# x, y, z, = -0.44999999999999996, -0.5, 0
+x, y, z, = 0.0, 0.0, radius
 depth_max = 10000.0
 depth_scale = 15.0
 intrinsic_scale = 1.0
@@ -69,36 +57,16 @@ c_scale = 120000//1000
 rx = ry = rz = 0
 
 extrinsics: Tensor = Tensor(np.eye(4),float32)
-# extrinsics[:3,3] = (x,y,z)
+extrinsics[:3,3] = (x,y,z)
 extrinsics[:3,:3] = np.eye(3)
 intrinsics: Tensor = Tensor([[c_scale,  0.0,   cam_width*0.5],
                             [ 0.0, c_scale,    cam_height*0.5],
                             [ 0.0,  0.0,   1.0]],
                             float32)
 
-# points = np.random.rand(100, 3)*100
-# points = np.random.rand(100, 3)*1e2
-# point_cloud = o3d.geometry.PointCloud()
-# point_cloud.points = o3d.utility.Vector3dVector(points)
-# pcd = o3d.t.geometry.PointCloud.from_legacy(point_cloud)
-# pcd = pcd.cuda()
-# print('pcd.is_cuda', pcd.is_cuda)
-# img = pcd.cpu().project_to_depth_image(width=cam_width, height=cam_height,
-#                         extrinsics=extrinsics,
-#                          intrinsics=intrinsics,
-#                         depth_scale=depth_scale,
-#                         depth_max=depth_max
-#                         )
-
-# key = ' '
-# while key != ord('q'):
-#     cv2.imshow('projection', np.asarray(img))
-#     key = cv2.waitKey(1)
-
-# intrinsics = K
-
 ### Construct frame to render image on.
 frame_mesh: o3d.t.geometry.TriangleMesh = create_image_frame(width=frame_width, height=frame_height) 
+frame_mesh.translate((0,0,radius))
 
 axis = np.array([0, 0, 1])
 num_rotations = 100
@@ -106,10 +74,6 @@ rotations = generate_rotation_matrices(initial_axis=axis, num_rotations=num_rota
 rot_idx = 0
 t_old = 0.0
 
-# print(intrinsics.T().mul(object_pcl.point.positions.T()))
-
-# import matplotlib.pyplot as plt
-# fig = plt.figure()
 # def animate(w, time: float, old_axis: List[NDArray]=old_axis, pcl=object_pcl):
 def animate(w, time: float, pcl=object_pcl):
     global rotations
@@ -124,7 +88,7 @@ def animate(w, time: float, pcl=object_pcl):
     # w.show_geometry("mesh", True)
     
     
-    rotate_axis_angle(old_axis=axis, pcl=pcl)
+    # rotate_axis_angle(old_axis=axis, pcl=pcl)
     pcl.rotate(rotations[rot_idx % num_rotations], center=object_center)
     rot_idx += 1
     
@@ -138,10 +102,6 @@ def animate(w, time: float, pcl=object_pcl):
                                       
     cv2.imshow('projection', np.asarray(img))
     cv2.waitKey(1)
-    proj = (intrinsics@(pcl.point.positions.T()))
-    proj = proj// proj[-1,:]
-    print(proj)
-    print(proj.shape)
 
     draw_image_on_image_frame(frame=frame_mesh, image=img, frame_size=(frame_height, frame_width))
     w.remove_geometry("image_frame")
@@ -161,7 +121,7 @@ geoms = [
     # {'name': 'rot_axis', 'geometry': rot_axis, 'material': mat_rot_axis},
     {'name': 'object', 'geometry': object_pcl},
     {'name': 'image_frame', 'geometry': frame_mesh},
-    # {'name': 'sphere', 'geometry': sphere_mesh, 'material': mat_sphere},
+    {'name': 'sphere', 'geometry': sphere_mesh, 'material': mat_sphere},
 ]
 
 

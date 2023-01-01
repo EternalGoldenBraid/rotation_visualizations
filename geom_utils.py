@@ -38,6 +38,36 @@ def project_to_plane(plane_width: int, plane_height: int,
         1, 1, 1]
     plane_pcl.point.colors = o3d.core.Tensor(plane_colors.reshape(-1, 3, order='C'), o3d.core.float32)
 
+def create_sphere_mesh(coords: tuple =(0,0,0), scale: float =1., radius=1.0):
+    """
+    Create TriangleMesh sphere and PBR materials.
+    Return mesh and materials.
+    """
+    mat_sphere = o3d.visualization.rendering.MaterialRecord()
+    # mat_sphere.shader = 'defaultLitTransparency'
+    mat_sphere.shader = 'defaultLitSSR'
+    mat_sphere.base_color = [0.467, 0.467, 0.467, 0.2]
+    mat_sphere.base_roughness = 0.0
+    mat_sphere.base_reflectance = 0.0
+    mat_sphere.base_clearcoat = 1.0
+    mat_sphere.thickness = 1.0
+    mat_sphere.transmission = 1.0
+    mat_sphere.absorption_distance = 100
+    mat_sphere.absorption_color = [0.5, 0.5, 0.5]
+
+    sphere_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=radius, 
+                        create_uv_map=True)
+    # sphere_mesh = o3d.t.geometry.TriangleMesh.from_legacy(sphere_mesh)
+    # sphere_mesh.compute_vertex_normals()
+    sphere_mesh.translate(coords)
+
+    # mat_sphere = convert_material_record(mat_record = mat_sphere)
+    # sphere_mesh.material = mat_sphere
+    # sphere_mesh.vertices = o3d.utility.Vector3dVector(
+    #     (np.asarray(sphere_mesh.vertices) - np.asarray(sphere_mesh.vertices).mean(axis=0))*scale)
+    
+    return sphere_mesh, mat_sphere
+
 def generate_rotation_matrices(initial_axis: NDArray, num_rotations: int):
 
     rotations: NDArray = np.empty((num_rotations, 3, 3))

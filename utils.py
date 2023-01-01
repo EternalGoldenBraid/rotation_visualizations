@@ -23,7 +23,7 @@ def convert_material_record(mat_record):
 def load_object_pointcloud(device: o3d.core.Device, n_points: int = 2048):
 
     ### Read mesh into pcl
-    mesh = o3d.t.io.read_triangle_mesh("models/obj_000001.ply", print_progress=True)
+    mesh = o3d.t.io.read_triangle_mesh("models/obj_000007.ply", print_progress=True)
     # In mm
     mesh.vertex.positions = (mesh.vertex.positions-mesh.vertex.positions.mean(dim=0))*1000.
     # mesh.vertex.positions = (mesh.vertex.positions-mesh.vertex.positions.mean(dim=0))

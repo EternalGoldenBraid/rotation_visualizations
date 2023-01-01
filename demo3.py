@@ -25,13 +25,13 @@ DEVICE = o3d.core.Device('CPU:0')
 radius=0
 
 ### Load object to be rotated
-object_pcl = load_object_pointcloud(device=DEVICE)
+object_pcl = load_object_pointcloud(device=DEVICE, n_points=1000)
 object_center = Tensor(np.array([0,0,radius]), float32, device=DEVICE)
 object_pcl.translate(object_center)
 
 ### Construct projection plane (camera)
-plane_width: int = 640
-plane_height: int = 480
+plane_width: int = 1980
+plane_height: int = 1090
 plane_pcl = create_plane(width=plane_width, height=plane_height, device=DEVICE)
 cam_width = plane_width //2
 cam_height = plane_height//2
@@ -39,16 +39,15 @@ fx = cam_width/0.5
 fy = cam_height/0.5
 cx = cam_width; cy = cam_height
 # cx = 0; cy = 0
-K = np.array([  [fx, 0, cx],
-                [0, fy, cy],
-                [0,  0,  1]])
+K = np.array([[fx, 0, cx],
+              [0, fy, cy],
+              [0,  0,  1]])
 
 ### Construct frame to render image on.
 frame_mesh: o3d.t.geometry.TriangleMesh = create_image_frame(width=cam_width, height=cam_height) 
 ### Downsample
 # object_pcl.voxel_down_sample(1.5)
 # plane_pcl.voxel_down_sample(1.5)
-
 
 axis = np.array([0, 0, 1])
 num_rotations = 100
@@ -69,8 +68,8 @@ extrinsics: Tensor = Tensor([
 #                 [0.,  0.,  1.]],
 #                 float32)
 intrinsics: Tensor = Tensor([
-                [-0.5,  0.0,   0.5],
-                [ 0.0, -0.5,   0.5],
+                [-0.5,  0.0,   0.5*cam_width],
+                [ 0.0, -0.5,   0.5*cam_height],
                 [ 0.0,  0.0,   1.0]],
                 float32)
 
