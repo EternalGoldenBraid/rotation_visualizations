@@ -1,4 +1,6 @@
 import open3d as o3d
+from open3d.core import Tensor, float32
+
 import numpy as np
 
 from numpy.typing import NDArray
@@ -17,6 +19,23 @@ def convert_material_record(mat_record):
     # mat.texture_maps['ao_rough_metal'] = o3d.t.geometry.Image.from_legacy(
     #     mat_record.ao_rough_metal_img)
     return mat
+
+def load_object_pointcloud(device: o3d.core.Device, n_points: int = 2048):
+
+    ### Read mesh into pcl
+    mesh = o3d.t.io.read_triangle_mesh("models/obj_000007.ply", print_progress=True)
+    # In mm
+    mesh.vertex.positions = (mesh.vertex.positions-mesh.vertex.positions.mean(dim=0))*1000.
+    # mesh.vertex.positions = (mesh.vertex.positions-mesh.vertex.positions.mean(dim=0))
+    
+    mesh_pcl = o3d.t.geometry.PointCloud(device)
+    mesh_pcl.point.positions = mesh.vertex.positions
+    # Downsample to n_points
+    mesh_pcl = mesh_pcl.random_down_sample(sampling_ratio=n_points/len(mesh_pcl.point.positions))
+    mesh_pcl = mesh_pcl.paint_uniform_color(Tensor([1.0, 0.0, 0.0], float32))
+    # mesh_pcl.paint_uniform_color([0.5, 0, 0.1])
+    
+    return mesh_pcl
 
 def create_sphere_pcl(n_pts_sphere=100, coords=(0,0,0)):
 
@@ -105,14 +124,3 @@ def get_rotating_transform(u, v):
     transform = T @ R @ T.T
     assert np.allclose(v, transform @ u)
     return transform
-
-def gen_spherical_gaussian_axis(old_axis):
-    """
-    Generate a random unit vector on the unit sphere close to the old_axis
-    """
-
-    axis = np.random.randn(3)
-    axis /= np.linalg.norm(axis)
-    axis = axis * 0.1 + old_axis * 0.9
-    axis /= np.linalg.norm(axis)
-    return axis
