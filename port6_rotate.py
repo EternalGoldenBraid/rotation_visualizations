@@ -3,6 +3,8 @@ Animate the rotation of a point cloud
 """
 from typing import Dict, List
 
+from threading import Thread
+
 import cv2
 
 import open3d as o3d
@@ -15,10 +17,33 @@ from numpy.typing import NDArray
 import time
 from math import pi
 
+from apple_pygatt.examples.basic import MyWatchManager as Watch
+# from touch_sdk import WatchManager
+
 from utils import load_object_pointcloud
 from visualizer_utils import visualizer_setup, create_image_frame, draw_image_on_image_frame
 from geom_utils import (rotate_axis_angle, generate_rotation_matrices, 
                         create_plane, project_to_plane, create_sphere_mesh)
+
+# class Watch(WatchManager):
+#     def __init__(self):
+#         self.quaternion = None
+
+#     def on_quat(self, quaternion):
+#         print('quat', quaternion)
+#         self.quaternion = quaternion
+#         print(type(self.quaternion))
+
+#     def on_tap(self):
+#         print('tap')
+
+watch = Watch()
+from time import sleep
+sleep(1)
+# watch.start()
+# watch.run()
+watch_thread = Thread(target=watch.start)
+watch_thread.start()
 
 DEVICE = o3d.core.Device('CPU:0')
 # DEVICE = o3d.core.Device('CUDA:0')
@@ -70,9 +95,10 @@ frame_mesh.translate((0,0,radius))
 
 axis = np.array([0, 0, 1])
 num_rotations = 100
-rotations = generate_rotation_matrices(initial_axis=axis, num_rotations=num_rotations)
+rotation = Tensor([ [1, 0, 0], [0, 1, 0], [0, 0, 1]])
 rot_idx = 0
 t_old = 0.0
+
 
 # def animate(w, time: float, old_axis: List[NDArray]=old_axis, pcl=object_pcl):
 def animate(w, time: float, pcl=object_pcl):
@@ -81,6 +107,7 @@ def animate(w, time: float, pcl=object_pcl):
     global n_rotations
     global plane_pcl
     global K
+    global watch
 
     # w.update_geometry("mesh", mesh_pcl, 0)
     w.remove_geometry("object")
@@ -89,7 +116,12 @@ def animate(w, time: float, pcl=object_pcl):
     
     
     # rotate_axis_angle(old_axis=axis, pcl=pcl)
-    pcl.rotate(rotations[rot_idx % num_rotations], center=object_center)
+    # pcl.rotate(rotations[rot_idx % num_rotations], center=object_center)
+    print("Watch quat:", watch.quaternion)
+    pcl.rotate(
+        o3d.geometry.get_rotation_matrix_from_quaternion(watch.quaternion),
+        center=object_center)
+
     rot_idx += 1
     
     # img = pcl.project_to_rgbd_image(width=cam_width, height=cam_height,
@@ -124,30 +156,5 @@ geoms = [
     {'name': 'sphere', 'geometry': sphere_mesh, 'material': mat_sphere},
 ]
 
-
-# def visualizer_setup(geoms: List[Dict], title='demo', width=1024, height=768, 
-#         bg_color= (1.0, 1.0, 1.0, 1.0), bg_image = None, callback=None):
-
-#     gui.Application.instance.initialize()
-#     w = O3DVisualizer(title, width, height)
-#     w.set_background(bg_color, bg_image)
-#     w.show_settings = True
-    
-    
-#     # w.add_action("animate", animate)
-#     w.animation_time_step = 0.01
-#     w.animation_duration = 10
-#     w.set_on_animation_frame(animate)
-#     # w.animation_frame_delay=0.1
-#     # w.set_on_animation_tick(animate)
-
-#     ### Add mesh to visualizer
-#     w.add_geometry("object", object_pcl)
-    
-#     w.reset_camera_to_default()  # make sure far/near get setup nicely
-#     gui.Application.instance.add_window(w)
-#     gui.Application.instance.run()
-    
-#     ### Animate the rotation of the point cloud
 
 visualizer_setup(geoms=geoms, callback=animate)

@@ -68,7 +68,7 @@ def create_sphere_mesh(coords: tuple =(0,0,0), scale: float =1., radius=1.0):
     
     return sphere_mesh, mat_sphere
 
-def generate_rotation_matrices(initial_axis: NDArray, num_rotations: int):
+def generate_rotation_matrices(initial_axis: NDArray, num_rotations: int) -> NDArray:
 
     rotations: NDArray = np.empty((num_rotations, 3, 3))
     axis = initial_axis
