@@ -44,8 +44,8 @@ def create_sphere_mesh(coords: tuple =(0,0,0), scale: float =1., radius=1.0):
     Return mesh and materials.
     """
     mat_sphere = o3d.visualization.rendering.MaterialRecord()
-    # mat_sphere.shader = 'defaultLitTransparency'
-    mat_sphere.shader = 'defaultLitSSR'
+    mat_sphere.shader = 'defaultLitTransparency'
+    # mat_sphere.shader = 'defaultLitSSR'
     mat_sphere.base_color = [0.467, 0.467, 0.467, 0.2]
     mat_sphere.base_roughness = 0.0
     mat_sphere.base_reflectance = 0.0
@@ -83,6 +83,27 @@ def generate_rotation_matrices(initial_axis: NDArray, num_rotations: int) -> NDA
         # yield rotation
         
     return rotations
+
+def align_vectors(v1: np.ndarray, v2: np.ndarray) -> np.ndarray:
+    """
+    Return a rotation matrix that rotates v1 to v2.
+    """
+    # Normalize the vectors
+    v1 = v1 / np.linalg.norm(v1)
+    v2 = v2 / np.linalg.norm(v2)
+    
+    # Compute the cross product and normalize it to get the axis of rotation
+    axis = np.cross(v1, v2)
+    axis = axis / np.linalg.norm(axis)
+    
+    # Compute the angle of rotation using the dot product
+    angle = np.arccos(np.dot(v1, v2))
+    
+    # Create the rotation matrix
+    ux, uy, uz = axis
+    c, s = np.cos(angle), np.sin(angle)
+    R = o3d.geometry.Geometry3D.get_rotation_matrix_from_axis_angle(rotation=angle*axis)
+    return R
         
     
 def gen_spherical_gaussian_axis(old_axis):

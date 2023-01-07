@@ -1,6 +1,7 @@
 """
 Animate the rotation of a point cloud
 """
+
 from typing import Dict, List
 import time
 from math import pi
@@ -80,7 +81,7 @@ x, y, z, = 0.0, 0.0, radius
 depth_max = 10000.0
 depth_scale = 15.0
 intrinsic_scale = 1.0
-c_scale = 120000//1000
+c_scale = 120000//500
 rx = ry = rz = 0
 
 extrinsics: Tensor = Tensor(np.eye(4),float32)
@@ -95,52 +96,86 @@ intrinsics: Tensor = Tensor([[c_scale,  0.0,   cam_width*0.5],
 frame_mesh: o3d.t.geometry.TriangleMesh = create_image_frame(width=frame_width, height=frame_height) 
 frame_mesh.translate((0,0,radius))
 
+### Virtual Camera pos
+# rot_axis_mesh: o3d.t.geometry.TriangleMesh  = create_image_frame(width=frame_width, height=frame_height)
+# rot_axis_mesh.translate((0,0, radius))
+
 axis = np.array([0, 0, 1])
 num_rotations = 100
 rotation = Tensor([ [1, 0, 0], [0, 1, 0], [0, 0, 1]])
 rot_idx = 0
 t_old = 0.0
-
+R_updated: NDArray = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=float)
+R_prev: NDArray = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=float)
+id: NDArray = np.eye(3, dtype=float)
 
 # def animate(w, time: float, old_axis: List[NDArray]=old_axis, pcl=object_pcl):
 def animate(w, time: float, pcl=object_pcl):
+    # TODO: Get rid of these globals for this callback.
     global rotations
     global rot_idx
     global n_rotations
     global plane_pcl
     global K
     global watch
+    global R_prev
+    global R_updated
 
     # w.update_geometry("mesh", mesh_pcl, 0)
     w.remove_geometry("object")
-    w.add_geometry(name="object", geometry=pcl, time=time)
+    # w.add_geometry(name="object", geometry=pcl, time=time)
     # w.show_geometry("mesh", True)
-    
     
     # rotate_axis_angle(old_axis=axis, pcl=pcl)
     # pcl.rotate(rotations[rot_idx % num_rotations], center=object_center)
-    print(f"Watch quat: {watch.quaternion}, rot: {sp_R.from_quat(watch.quaternion).as_matrix()}")
-    pcl.rotate(
-        # o3d.geometry.get_rotation_matrix_from_quaternion(watch.quaternion),
-        o3d.geometry.Geometry3D.get_rotation_matrix_from_quaternion(watch.quaternion),
+
+    # Is is w.r.t. to the canonical watch frame. Needs to be updated to take into account previous rotations.
+    R = o3d.geometry.get_rotation_matrix_from_quaternion([watch.quaternion[-1], *watch.quaternion[:-1]])
+    
+    ### NOTE: Keep changing the canonical frame
+    # R_updated = R@R_updated
+    # print(f"R: {R}")
+    # print("Rot idx:", rot_idx)
+    # pcl = pcl.rotate(
+    #     R_updated,
+    #     center=object_center)
+    # w.add_geometry(name="object", geometry=pcl, time=time)
+
+    ### NOTE: Invert the pose after applying it
+    # R_prev = R
+    pcl = pcl.rotate(
+        R @ R_prev.T,
         center=object_center)
+    w.add_geometry(name="object", geometry=pcl, time=time)
+    R_prev = R
+
+    # if 
+    # R = o3d.geometry.get_rotation_matrix_from_quaternion(watch.quaternion)
+    # if not np.allclose(R @ np.linalg.inv(R_prev), id, atol=atol):
+    #     print("Rotated")
+    #     pcl.rotate(
+    #         # o3d.geometry.get_rotation_matrix_from_quaternion(watch.quaternion),
+    #         # o3d.geometry.Geometry3D.get_rotation_matrix_from_quaternion(watch.quaternion),
+    #         R,
+    #         center=object_center)
+    # R_prev = R
 
     rot_idx += 1
     
-    # img = pcl.project_to_rgbd_image(width=cam_width, height=cam_height,
+    img = pcl.project_to_rgbd_image(width=cam_width, height=cam_height,
     # img = pcl.project_to_depth_image(width=cam_width, height=cam_height,
-    #                         extrinsics=extrinsics,
-    #                          intrinsics=intrinsics,
-    #                         depth_scale=depth_scale,
-    #                         depth_max=depth_max
-    #                         )
+                            extrinsics=extrinsics,
+                             intrinsics=intrinsics,
+                            depth_scale=depth_scale,
+                            depth_max=depth_max
+                            )
                                       
     # cv2.imshow('projection', np.asarray(img))
     # cv2.waitKey(1)
 
-    # draw_image_on_image_frame(frame=frame_mesh, image=img, frame_size=(frame_height, frame_width))
-    # w.remove_geometry("image_frame")
-    # w.add_geometry("image_frame", frame_mesh, time=time)
+    draw_image_on_image_frame(frame=frame_mesh, image=img.color, frame_size=(frame_height, frame_width))
+    w.remove_geometry("image_frame")
+    w.add_geometry("image_frame", frame_mesh, time=time)
     
     
     ### Only way I managed to retain the object in the scene during animation is to set is_animating flag to false
@@ -153,10 +188,11 @@ def animate(w, time: float, pcl=object_pcl):
 geoms = [
     # {'name': 'coords', 'geometry': coords},
     # # {'name': 'tangent_coords', 'geometry': tangent_coord},
-    # {'name': 'rot_axis', 'geometry': rot_axis, 'material': mat_rot_axis},
+    # {'name': 'rot_axis', 'geometry': rot_axis_mesh, 'material': mat_rot_axis},
+    # {'name': 'rot_axis', 'geometry': rot_axis_mesh},
     {'name': 'object', 'geometry': object_pcl},
-    # {'name': 'image_frame', 'geometry': frame_mesh},
-    # {'name': 'sphere', 'geometry': sphere_mesh, 'material': mat_sphere},
+    {'name': 'image_frame', 'geometry': frame_mesh},
+    {'name': 'sphere', 'geometry': sphere_mesh, 'material': mat_sphere},
 ]
 
 

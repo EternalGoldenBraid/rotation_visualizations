@@ -19,8 +19,9 @@ def visualizer_setup(geoms: List[Dict], title='demo', width=640, height=480,
     w.show_settings = True
 
     # w.add_action("animate", animate)
-    w.animation_time_step = 0.01
-    w.animation_duration = 0.1
+    # w.animation_time_step = 0.01
+    w.animation_time_step = 0.1
+    w.animation_duration = 1
     w.set_on_animation_frame(callback)
     # w.animation_frame_delay=0.1
     # w.set_on_animation_tick(animate)
@@ -33,7 +34,7 @@ def visualizer_setup(geoms: List[Dict], title='demo', width=640, height=480,
     w.reset_camera_to_default()  # make sure far/near get setup nicely
     gui.Application.instance.add_window(w)
     gui.Application.instance.run()
-
+    
 
 def create_image_frame(width: int, height: int) -> o3d.t.geometry.TriangleMesh:
    # Read the image
