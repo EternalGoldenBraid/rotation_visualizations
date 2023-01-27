@@ -20,7 +20,8 @@ def convert_material_record(mat_record):
     #     mat_record.ao_rough_metal_img)
     return mat
 
-def load_object_pointcloud(device: o3d.core.Device, n_points: int = 2048):
+def load_object_pointcloud(device: o3d.core.Device, n_points: int = 2048,
+                        estimate_normals: bool = True):
 
     ### Read mesh into pcl
     mesh = o3d.t.io.read_triangle_mesh("models/obj_000003.ply", print_progress=True)
@@ -36,6 +37,9 @@ def load_object_pointcloud(device: o3d.core.Device, n_points: int = 2048):
     if ratio < 1.0 and ratio > 0.0:
         mesh_pcl = mesh_pcl.random_down_sample(sampling_ratio=ratio)
     mesh_pcl = mesh_pcl.paint_uniform_color(Tensor([1.0, 0.0, 0.0], float32))
+    
+    if estimate_normals == True:
+        mesh_pcl.estimate_normals()
     # mesh_pcl.paint_uniform_color([0.5, 0, 0.1])
     
     return mesh_pcl

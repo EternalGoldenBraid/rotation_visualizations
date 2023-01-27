@@ -9,6 +9,57 @@ from open3d.visualization import O3DVisualizer
 
 # from utils import gen_spherical_gaussian_axis
 
+class Intermediate_Projections:
+    def __init__(self, main_pcl: o3d.t.geometry.PointCloud, 
+                main_pcl_center: Tensor = Tensor([0,0,0]), 
+                n_basis: int = 5,  device=o3d.core.Device('CPU:0'),
+                extrinsics: Tensor = Tensor([[1.0, 0.0, 0.0, 0.0],[0.0, 1.0, 0.0, 0.0],
+                                                    [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0],
+                                                    ]),
+                intrinsics: Tensor = Tensor([[1.0, 0.0, 0.0],[0.0, 1.0, 0.0],[0.0, 0.0, 1.0]])
+                ):
+        self.extrinsics: Tensor = extrinsics
+        self.intrinsics: Tensor = intrinsics
+        
+        # Spacing between projections
+        final_pos: Tensor = self.extrinsics[:3,3]
+        initial_pos: Tensor = Tensor([0.,0.,0.], float32)
+        # spacing: float = (final_pos - initial_pos)/n_basis
+        spacing: float = Tensor([100.0], dtype=float32)[0] # HACK
+        self.bases: List[Dict[str, o3d.t.geometry.PointCloud]] = []
+        
+        
+        P_homo: Tensor = Tensor(np.ones((4, main_pcl.point.positions.shape[0])), dtype=float32)
+        
+        proj_extrinsics: Tensor = Tensor.eye(4)
+        proj_intrinsics: Tensor = Tensor.eye(4)
+        for basis_idx in range(n_basis):
+            
+            projected_pcl: o3d.t.geometry.PointCloud = o3d.t.geometry.PointCloud(device=device)
+            # bases[basis_idx].points.positions = main_pcl.points.positions
+            projected_pcl.point.positions = main_pcl.point.positions
+
+            P_homo[:3, :] = projected_pcl.point.positions.T()
+
+            # Transform projection pcl to camera coords
+            projection_pos: Tensor = initial_pos+spacing*(basis_idx+1)
+            proj_extrinsics[:3, 3] = projection_pos
+            P_homo = proj_extrinsics @ P_homo
+            
+            # Initial projection
+            proj_intrinsics[:3,:3] = intrinsics
+            P_homo = proj_intrinsics @ P_homo
+            P = P_homo[:2, :] / P_homo[2,:]
+            projected_pcl.point.positions = P
+            
+            # Evenly spaced projectins
+            # TODO: Play with nonlinear distributions?
+            # projected_pcl.translate(initial_pos + (basis_idx+1)*spacing)
+
+            self.bases.append({'name': f'projection_{basis_idx}', 
+                        'geometry': projected_pcl}
+                        )
+            
 def create_plane(width=640, height=480, color=(0,0,0), device=None):
     plane_pts = np.array([[x, y, 0] for x in range(width) for y in range(height)])
     plane_pts = plane_pts - [width//2, height//2, 0]
@@ -44,8 +95,8 @@ def create_sphere_mesh(coords: tuple =(0,0,0), scale: float =1., radius=1.0):
     Return mesh and materials.
     """
     mat_sphere = o3d.visualization.rendering.MaterialRecord()
-    mat_sphere.shader = 'defaultLitTransparency'
-    # mat_sphere.shader = 'defaultLitSSR'
+    # mat_sphere.shader = 'defaultLitTransparency'
+    mat_sphere.shader = 'defaultLitSSR'
     mat_sphere.base_color = [0.467, 0.467, 0.467, 0.2]
     mat_sphere.base_roughness = 0.0
     mat_sphere.base_reflectance = 0.0
@@ -54,6 +105,7 @@ def create_sphere_mesh(coords: tuple =(0,0,0), scale: float =1., radius=1.0):
     mat_sphere.transmission = 1.0
     mat_sphere.absorption_distance = 100
     mat_sphere.absorption_color = [0.5, 0.5, 0.5]
+    # mat_sphere.ior = 0.0
 
     sphere_mesh = o3d.geometry.TriangleMesh.create_sphere(radius=radius, 
                         create_uv_map=True)

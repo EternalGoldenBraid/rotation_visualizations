@@ -1,4 +1,5 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
+from threading import Thread
 
 import open3d as o3d
 from open3d.visualization import O3DVisualizer
@@ -9,14 +10,87 @@ from numpy.typing import NDArray
 import time
 from math import pi
 
+from apple_pygatt.examples.basic import MyWatchManager as Watch
+
+class Viewer3D(object):
+    """
+    TODO: Why object?
+    From: https://github.com/isl-org/Open3D/issues/5501
+    """
+    
+    def __init__(self, title: str ='demo', width: int =640, height: int = 480,
+                bg_color=(1.0, 1.0, 1.0, 1.0), bg_image=None, raw_mode: bool = False,
+                show_skybox: bool = True):
+        
+        self.apple_watch_thread: Any = None
+        
+        self.geoms: List[Dict] = []
+        app = gui.Application.instance
+        app.initialize()
+        
+        self.main_vis: O3DVisualizer = O3DVisualizer(title, width, height)
+        app.add_window(self.main_vis)
+        self.main_vis.set_background(bg_color, bg_image)
+        self.main_vis.show_settings = True
+        
+        # TODO: What are these?
+        self.setup_depth_streaming()
+        # self.setup_o3d_scene()
+
+    def setup_depth_streaming(self):
+        # TODO: setup your depth / point cloud streaming source here
+        pass
+
+    def setup_point_clouds(self, geoms: List[Dict]) -> None:
+        # for geom in geoms: self.geoms.append(geom) 
+        for geom in geoms: self.main_vis.add_geometry(geom)
+        self.main_vis.reset_camera_to_default()
+        
+    def setup_watch(self):
+        self.watch = Watch()
+        self.watch_thread = Thread(target=self.watch.start)
+        self.watch_thread.start()
+
+        # TODO: Figure out how to use self.client in watch_manager.py to check for is_Connected.
+        # print("Connecting")
+        # while not self.watch.client.is_connected:
+            # pass
+        print("Apple watch setup done")
+            # raise RuntimeError("Could not connect to watch.")
+        
+    def update_point_clouds(self):
+        # update your point cloud data here: convert depth to point cloud / filter / etc.
+        pass
+
+    def setup_o3d_scene(self) -> None:
+        # center, eye, up
+        self.main_vis.setup_camera(60,
+                                    [4, 2, 5],
+                                    [0, 0, -1.5],
+                                    [0, 1, 0])
+        
+    def run_one_tick(self) -> bool:
+        "TODO: Change to run in thread. See:http://www.open3d.org/docs/release/python_api/open3d.visualization.gui.Application.html#open3d.visualization.gui.Application.run_in_thread"
+        app = gui.Application.instance
+        tick_return = app.run_one_tick()
+        if tick_return:
+            self.main_vis.post_redraw()
+        return tick_return
+
 
 def visualizer_setup(geoms: List[Dict], title='demo', width=640, height=480,
-                     bg_color=(1.0, 1.0, 1.0, 1.0), bg_image=None, callback=None):
+                     bg_color=(1.0, 1.0, 1.0, 1.0), bg_image=None, callback=None,
+                     raw_mode: bool = False, show_skybox: bool = True):
 
     gui.Application.instance.initialize()
     w = O3DVisualizer(title, width, height)
     w.set_background(bg_color, bg_image)
     w.show_settings = True
+    
+    if raw_mode == True:
+        w.enable_raw_mode(True)
+    if show_skybox == True:
+        w.show_skybox(True)
 
     # w.add_action("animate", animate)
     # w.animation_time_step = 0.01

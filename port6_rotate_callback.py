@@ -110,6 +110,7 @@ R_prev: NDArray = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=float)
 id: NDArray = np.eye(3, dtype=float)
 
 # def animate(w, time: float, old_axis: List[NDArray]=old_axis, pcl=object_pcl):
+# TODO: Wrap this in a class signifying the window.
 def animate(w, time: float, pcl=object_pcl):
     # TODO: Get rid of these globals for this callback.
     global rotations
@@ -162,18 +163,24 @@ def animate(w, time: float, pcl=object_pcl):
 
     rot_idx += 1
     
-    img = pcl.project_to_rgbd_image(width=cam_width, height=cam_height,
+    rgbd_img = pcl.project_to_rgbd_image(width=cam_width, height=cam_height,
     # img = pcl.project_to_depth_image(width=cam_width, height=cam_height,
                             extrinsics=extrinsics,
                              intrinsics=intrinsics,
                             depth_scale=depth_scale,
                             depth_max=depth_max
                             )
+    img = rgbd_img.color
+    img.create_normal_map()
                                       
     # cv2.imshow('projection', np.asarray(img))
     # cv2.waitKey(1)
 
-    draw_image_on_image_frame(frame=frame_mesh, image=img.color, frame_size=(frame_height, frame_width))
+    # This 
+    draw_image_on_image_frame(frame=frame_mesh, frame_size=(frame_height, frame_width),
+            # image=rgbd_img.color.create_normal_map(),
+            image=img,
+     )
     w.remove_geometry("image_frame")
     w.add_geometry("image_frame", frame_mesh, time=time)
     
@@ -185,7 +192,7 @@ def animate(w, time: float, pcl=object_pcl):
     w.is_animating = True
     return O3DVisualizer.TickResult.REDRAW
 
-geoms = [
+geoms: List[Dict] = [
     # {'name': 'coords', 'geometry': coords},
     # # {'name': 'tangent_coords', 'geometry': tangent_coord},
     # {'name': 'rot_axis', 'geometry': rot_axis_mesh, 'material': mat_rot_axis},
@@ -198,4 +205,7 @@ geoms = [
 
 # o3d.visualization.draw_geometries_with_animation_callback(geoms, animate)
 # o3d.visualization.draw_geometries_with_animation_callback([object_pcl], animate)
-visualizer_setup(geoms=geoms, callback=animate)
+visualizer_setup(geoms=geoms, callback=animate, 
+                # raw_mode=True,
+                show_skybox=False
+                )
